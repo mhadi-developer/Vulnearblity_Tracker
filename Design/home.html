@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vulnerability Tracker - Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./home-style.css">
+</head>
+<body>
+<div class="bg" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i></div>
+
+<div class="wrap">
+  <header class="top glass">
+    <div class="brand">
+      <span class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg></span>
+      Vulnerability Tracker
+    </div>
+    <span class="chip" id="mode">Demo mode</span>
+    <span class="chip" id="who"></span>
+    <button class="btn sm" id="out" type="button">Sign out</button>
+  </header>
+
+  <main>
+    <section id="app">
+      <div class="hero">
+        <div><h1>Findings</h1><p class="sub" style="margin:4px 0 0">Every vulnerability, its severity, status and owner.</p></div>
+        <button class="btn pri" id="newBtn" type="button">New finding</button>
+      </div>
+
+      <div class="tiles">
+        <div class="tile clay s-all"><span>All findings</span><b id="n-all">0</b></div>
+        <div class="tile clay s-critical"><span>Critical</span><b id="n-critical">0</b><div class="meter"><i id="m-critical"></i></div></div>
+        <div class="tile clay s-high"><span>High</span><b id="n-high">0</b><div class="meter"><i id="m-high"></i></div></div>
+        <div class="tile clay s-medium"><span>Medium</span><b id="n-medium">0</b><div class="meter"><i id="m-medium"></i></div></div>
+        <div class="tile clay s-low"><span>Low</span><b id="n-low">0</b><div class="meter"><i id="m-low"></i></div></div>
+      </div>
+
+      <div class="bar">
+        <input id="q" type="search" placeholder="Search findings" aria-label="Search findings">
+        <select id="fs" aria-label="Severity"><option value="">All severities</option><option>critical</option><option>high</option><option>medium</option><option>low</option></select>
+        <select id="ft" aria-label="Status"><option value="">All statuses</option><option value="open">Open</option><option value="in_progress">In progress</option><option value="resolved">Resolved</option><option value="closed">Closed</option></select>
+        <select id="fo" aria-label="Owner"></select>
+      </div>
+
+      <div id="list"></div>
+      <div class="pager"><button class="btn sm" id="prev" type="button">Previous</button><span id="pg"></span><button class="btn sm" id="next" type="button">Next</button></div>
+    </section>
+  </main>
+</div>
+
+<dialog id="fDlg"><form class="glass" id="ff" method="dialog">
+  <h2 id="dt">New finding</h2>
+  <div class="field"><label for="ftitle">Title</label><input id="ftitle" placeholder="5 to 120 characters"></div>
+  <div class="field"><label for="fdesc">Description</label><textarea id="fdesc" placeholder="What was found and where"></textarea></div>
+  <div class="two">
+    <div class="field"><label for="fsev">Severity</label><select id="fsev"><option>critical</option><option>high</option><option selected>medium</option><option>low</option></select></div>
+    <div class="field"><label for="fown">Owner</label><select id="fown"></select></div>
+  </div>
+  <div class="field" id="stBox"><label for="fst">Status</label><select id="fst"></select></div>
+  <div class="end"><button class="btn" id="fx" type="button">Cancel</button><button class="btn pri" type="submit">Save finding</button></div>
+</form></dialog>
+
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+const SEV=['critical','high','medium','low'];
+const ST={open:'Open',in_progress:'In progress',resolved:'Resolved',closed:'Closed'};
+const NEXT={open:['in_progress','closed'],in_progress:['resolved','open'],resolved:['closed','in_progress'],closed:['open']};
+const PAGE=6;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ls={get(k){try{return localStorage.getItem(k)}catch{return null}},set(k,v){try{localStorage.setItem(k,v)}catch{}}};
+
+let S={base:ls.get('vt.api')||'',token:ls.get('vt.token'),user:null,users:[],items:[],page:1,edit:null};
+const demo=()=>!S.base;
+
+let D=null;try{D=JSON.parse(ls.get('vt.demo'))}catch{}
+D=D||{n:20,
+  users:[{id:1,email:'ayesha@example.com',name:'Ayesha',role:'admin'},{id:2,email:'bilal@example.com',name:'Bilal',role:'analyst'},{id:3,email:'hadi@example.com',name:'Hadi',role:'analyst'},{id:4,email:'sana@example.com',name:'Sana',role:'analyst'}],
+  items:[
+    {id:1,title:'Admin page reachable without login',description:'/admin responds 200 with no token.',severity:'critical',status:'in_progress',owner_id:2},
+    {id:2,title:'SQL injection in search endpoint',description:'The q parameter is concatenated into a query.',severity:'high',status:'open',owner_id:3},
+    {id:3,title:'Missing rate limit on login',description:'No lockout after repeated failed attempts.',severity:'medium',status:'open',owner_id:1},
+    {id:4,title:'Outdated TLS configuration',description:'TLS 1.0 still enabled on the mail gateway.',severity:'medium',status:'resolved',owner_id:4},
+    {id:5,title:'Verbose server version header',description:'Server header exposes the exact version.',severity:'low',status:'closed',owner_id:3},
+    {id:6,title:'Secrets committed in old branch',description:'API key found in git history.',severity:'high',status:'in_progress',owner_id:2}
+  ]};
+const save=()=>ls.set('vt.demo',JSON.stringify(D));
+
+async function http(m,p,b){
+  const h={};if(S.token)h.Authorization='Bearer '+S.token;
+  let body;if(b){h['Content-Type']='application/json';body=JSON.stringify(b)}
+  const r=await fetch(S.base.replace(/\/$/,'')+p,{method:m,headers:h,body});
+  if(!r.ok)throw new Error('Request failed: '+r.status);
+  return r.status===204?null:r.json();
+}
+
+const API={
+  async load(){
+    if(demo()){
+      S.users=D.users; S.items=D.items;
+      const auth = JSON.parse(ls.get('vt.auth')||'{"email":"analyst@example.com","role":"analyst"}');
+      S.user = D.users.find(x=>x.email===auth.email) || {id:99, email:auth.email, name:auth.email.split('@')[0], role:auth.role};
+      return;
+    }
+    const [u,f]=await Promise.all([http('GET','/users'),http('GET','/findings')]);
+    S.users=u.items||u; S.items=f.items||f;
+    S.user = {email:'API User', role:'admin'};
+  },
+  async create(d){
+    if(demo()){D.items.unshift({id:D.n++,...d,status:'open'});save();return}
+    await http('POST','/findings',d);
+  },
+  async patch(id,d){
+    if(demo()){const f=D.items.find(x=>x.id===id);Object.assign(f,d);save();return}
+    await http('PATCH','/findings/'+id,d);
+  },
+  async del(id){
+    if(demo()){D.items=D.items.filter(x=>x.id!==id);save();return}
+    await http('DELETE','/findings/'+id);
+  }
+};
+
+const nameOf=id=>{const u=S.users.find(x=>x.id===id);return u?(u.name||u.email.split('@')[0]):'Unassigned'};
+function toast(msg,err){
+  const t=document.createElement('div');t.className='toast glass'+(err?' err':'');t.textContent=msg;
+  $('toasts').append(t);setTimeout(()=>t.remove(),3800);
+}
+
+function fillOwners(){
+  const opts=S.users.map(u=>`<option value="${u.id}">${esc(u.name||u.email)}</option>`).join('');
+  $('fown').innerHTML=opts;$('fo').innerHTML='<option value="">All owners</option>'+opts;
+}
+
+const rowHtml=f=>`<article class="row glass" data-id="${f.id}">
+  <div class="main"><div class="t"><span class="sev s-${f.severity}">${f.severity}</span><h3>${esc(f.title)}</h3></div><p>${esc(f.description||'No description')}</p></div>
+  <select class="inset" data-st><option value="${f.status}">${ST[f.status]}</option>${NEXT[f.status].map(n=>`<option value="${n}">${ST[n]}</option>`).join('')}</select>
+  <span class="own">${esc(nameOf(f.owner_id))}</span>
+  <div class="acts"><button class="btn sm" data-edit type="button">Edit</button>${S.user.role==='admin'?'<button class="btn sm dng" data-del type="button">Delete</button>':''}</div>
+</article>`;
+
+function render(){
+  const q=$('q').value.trim().toLowerCase(),sv=$('fs').value,st=$('ft').value,ow=$('fo').value,all=S.items;
+  SEV.forEach(s=>{const n=all.filter(x=>x.severity===s).length;$('n-'+s).textContent=n;$('m-'+s).style.setProperty('--p',(all.length?(n/all.length*100):0)+'%')});
+  $('n-all').textContent=all.length;
+  
+  const list=all.filter(x=>(!sv||x.severity===sv)&&(!st||x.status===st)&&(!ow||String(x.owner_id)===ow)&&(!q||(x.title+' '+(x.description||'')).toLowerCase().includes(q)));
+  const pages=Math.max(1,Math.ceil(list.length/PAGE));S.page=Math.min(S.page,pages);
+  
+  $('list').innerHTML=list.slice((S.page-1)*PAGE,S.page*PAGE).map(rowHtml).join('')||'<p class="empty glass">No findings match your filters.</p>';
+  $('pg').textContent=`Page ${S.page} of ${pages}`;$('prev').disabled=S.page<2;$('next').disabled=S.page>=pages;
+}
+
+function openF(f){
+  S.edit=f?f.id:null;$('dt').textContent=f?'Edit finding':'New finding';
+  $('ftitle').value=f?.title||'';$('fdesc').value=f?.description||'';$('fsev').value=f?.severity||'medium';
+  if(f)$('fown').value=f.owner_id;
+  $('stBox').hidden=!f;
+  if(f)$('fst').innerHTML=`<option value="${f.status}">${ST[f.status]}</option>`+NEXT[f.status].map(n=>`<option value="${n}">${ST[n]}</option>`).join('');
+  $('fDlg').showModal();
+}
+
+async function init(){
+  await API.load();
+  $('mode').textContent = demo() ? 'Demo mode' : 'API connected';
+  $('who').textContent = `${S.user.email} (${S.user.role})`;
+  fillOwners();
+  render();
+}
+
+$('out').onclick=()=>{ls.removeItem('vt.token');ls.removeItem('vt.auth');window.location.href='login.html';};
+$('newBtn').onclick=()=>openF(null);
+$('fx').onclick=()=>$('fDlg').close();
+
+$('ff').onsubmit=async e=>{
+  e.preventDefault();
+  const title=$('ftitle').value.trim();
+  if(title.length<5){toast('Title too short',true);return;}
+  const d={title,description:$('fdesc').value.trim(),severity:$('fsev').value,owner_id:+$('fown').value};
+  if(S.edit){
+    if($('fst').value) d.status=$('fst').value;
+    await API.patch(S.edit,d);toast('Finding updated');
+  } else {
+    await API.create(d);S.page=1;toast('Finding added');
+  }
+  $('fDlg').close();await API.load();render();
+};
+
+$('list').onchange=async e=>{
+  if(!e.target.dataset.st)return;
+  const id=+e.target.closest('.row').dataset.id;
+  await API.patch(id,{status:e.target.value});
+  await API.load();render();toast('Status updated');
+};
+
+$('list').onclick=async e=>{
+  const row=e.target.closest('.row');if(!row)return;const id=+row.dataset.id;
+  if(e.target.dataset.edit!==undefined)openF(S.items.files?.find?.(x=>x.id===id)||S.items.find(x=>x.id===id));
+  if(e.target.dataset.del!==undefined){await API.del(id);await API.load();render();toast('Finding deleted');}
+};
+
+['q','fs','ft','fo'].forEach(id=>$(id).addEventListener('input',()=>{S.page=1;render()}));
+$('prev').onclick=()=>{S.page--;render()};
+$('next').onclick=()=>{S.page++;render()};
+
+init();
+</script>
+</body>
+</html>

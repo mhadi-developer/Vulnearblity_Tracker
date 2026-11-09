@@ -1,0 +1,34 @@
+/* Footer — quiet bar with a glass divider. Uses theme.css variables. */
+
+.site-footer {
+  margin-top: 88px;
+  padding: 28px 0 40px;
+  border-top: 1px solid var(--border-glass);
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.site-footer__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+
+.site-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+}
+.site-footer__links a {
+  color: var(--text-secondary);
+}
+.site-footer__links a:hover {
+  color: var(--cyan);
+}
+.site-footer__links a:focus-visible {
+  outline: 3px solid var(--cyan);
+  outline-offset: 3px;
+  border-radius: 4px;
+}

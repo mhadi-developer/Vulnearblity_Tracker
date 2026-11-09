@@ -1,0 +1,70 @@
+/* Header — sticky glass navigation bar. Uses theme.css variables. */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.site-header__inner {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  height: 68px;
+}
+
+.site-header__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-right: auto;
+  color: var(--text-primary);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.site-header__brand:hover {
+  color: var(--text-primary);
+}
+
+.site-header__logo {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  color: #fff;
+  box-shadow: var(--shadow-glow-violet);
+}
+
+.site-header__links {
+  display: flex;
+  gap: 6px;
+}
+.site-header__links a {
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+}
+.site-header__links a:hover {
+  color: var(--text-primary);
+  background: var(--surface-glass);
+}
+
+.site-header__brand:focus-visible,
+.site-header__links a:focus-visible {
+  outline: 3px solid var(--cyan);
+  outline-offset: 3px;
+}
+
+@media (max-width: 920px) {
+  .site-header__links {
+    display: none;
+  }
+}
+@media (max-width: 520px) {
+  .site-header__signin {
+    display: none;
+  }
+}

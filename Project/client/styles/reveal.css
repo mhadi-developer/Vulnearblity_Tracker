@@ -1,0 +1,38 @@
+.reveal {
+  opacity: 0;
+  transform: translateY(24px) scale(0.98);
+  transition:
+    opacity 400ms ease,
+    transform 800ms var(--spring);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+.reveal.is-done {
+  transition-delay: 0ms;
+}
+
+/* Cards that both reveal and lift on hover */
+.reveal.lift {
+  transition:
+    opacity 400ms ease,
+    transform 700ms var(--spring),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-smooth);
+  transition-delay: var(--reveal-delay, 0ms), var(--reveal-delay, 0ms), 0ms, 0ms;
+}
+.reveal.lift.is-done {
+  transition-delay: 0ms;
+}
+.reveal.is-in.lift:hover {
+  transform: translateY(-6px) scale(1.015);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
