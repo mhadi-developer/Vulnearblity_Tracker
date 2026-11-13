@@ -5,7 +5,7 @@ import Link from "next/link";
 import "../styles/global-theme.css"; // your global glass theme (adjust the path if needed)
 import "../styles/register-page.css";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL ?? "http://localhost:8001/api/v1";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const NAME_RE = /^\p{L}[\p{L}\s.'-]*$/u; // letters, spaces, dots, apostrophes, hyphens
 const USERNAME_RE = /^[A-Za-z0-9_]{3,20}$/; // 3 to 20 letters, numbers or underscores
@@ -74,7 +74,7 @@ export default function Register() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           full_name: name,
-          username: username.trim(),
+          user_name: username.trim(),
           email: email.trim(),
           password,
         }),
