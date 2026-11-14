@@ -12,7 +12,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 const APP_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 
 
-export async function AuthProvider({children}:{children:React.ReactNode}){
+export function AuthProvider({children}: Readonly<{children: React.ReactNode}>){
     const [user, setUser] = useState<unknown>(null);
     const [loading, setLoading] = useState(false);
 
@@ -20,7 +20,7 @@ export async function AuthProvider({children}:{children:React.ReactNode}){
     const fetchLoggedInUser = async ()=>{
         try{
             setLoading(true)
-            const response = await fetch(`${APP_URL}/auth/get/login-user`,{
+            const response = await fetch(`${APP_URL}/user/get/me`,{
                 method: "GET",
                 headers:{
                     "Content-Type":"application/json"
@@ -56,4 +56,11 @@ export async function AuthProvider({children}:{children:React.ReactNode}){
 }
 
 
-export const useAuth = useContext(AuthContext);
+export const useAuth = ()=>{
+    if (AuthContext){
+        return useContext(AuthContext)
+    }
+    else{
+        return null;
+    }
+}

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
-from .routers import auth
+from .routers import auth, user
 
 
 
@@ -39,6 +39,8 @@ app.add_middleware(
 
 
 app.include_router(auth.router, prefix="/api/v1", tags=["Authentication Routes"])
+app.include_router(user.router, prefix="/api/v1", tags=["User Routes"])
+
     
 @app.get("/")
 async def read_root():

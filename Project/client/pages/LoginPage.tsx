@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import "../styles/global-theme.css"; // your global glass theme (adjust the path if needed)
 import "../styles/login-page.css";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL ;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Login() {
@@ -38,8 +38,9 @@ export default function Login() {
       // FastAPI OAuth2 form: the email goes in the "username" field
       const res = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ username: email.trim(), password }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password }),
+        credentials: 'include'
       });
 
       if (res.status === 401) {
