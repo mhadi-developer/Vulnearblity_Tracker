@@ -1,6 +1,6 @@
 
 
-import { NAV_LINKS , FOOTER_LINKS } from "@/hooks/data/homeContent";
+import { FOOTER_LINKS } from "@/hooks/data/homeContent";
 
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -32,7 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <AuthProvider>
-         <Header links={NAV_LINKS} />
+         <Header />
         {children}
           <Footer links={FOOTER_LINKS} />
         </AuthProvider>

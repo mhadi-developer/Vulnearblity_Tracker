@@ -1,9 +1,10 @@
 "use client";
 
 import {useContext , createContext , useState, useEffect, useMemo} from "react";
+import type { loginUserType } from "@/types/common-types";
 
 type AuthContextValue = {
-    user: unknown;
+    user: loginUserType | null;
     loading: boolean;
 };
 
@@ -13,38 +14,38 @@ const APP_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 
 
 export function AuthProvider({children}: Readonly<{children: React.ReactNode}>){
-    const [user, setUser] = useState<unknown>(null);
-    const [loading, setLoading] = useState(false);
+    const [user, setUser] = useState<loginUserType | null>(null);
+    const [loading, setLoading] = useState(true);
 
+    useEffect(() => {
+        let isActive = true;
 
-    const fetchLoggedInUser = async ()=>{
-        try{
-            setLoading(true)
-            const response = await fetch(`${APP_URL}/user/get/me`,{
-                method: "GET",
-                headers:{
-                    "Content-Type":"application/json"
-                },
-                credentials:'include'
+        fetch(`${APP_URL}/user/get/me`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            credentials: "include",
+        })
+            .then(async (response) => {
+                if (!response.ok) return null;
+                const loginUser: loginUserType = await response.json();
+                return loginUser;
             })
+            .then((loginUser) => {
+                if (isActive && loginUser) setUser(loginUser);
+            })
+            .catch((error: unknown) => {
+                console.error("Failed to fetch the logged-in user:", error);
+            })
+            .finally(() => {
+                if (isActive) setLoading(false);
+            });
 
-            if(response.ok){
-               const loginUser = await response.json();
-               setUser(loginUser)
-               setLoading(false)
-            }
-
-           
-        }catch(e){
-           console.log('error to fetched loggedInUser------->',e)
-        }finally{
-            setLoading(false)
-        }
-    }
-
-   useEffect(()=>{
-    fetchLoggedInUser()
-   },[])
+        return () => {
+            isActive = false;
+        };
+    }, []);
 
 
     const contextValue = useMemo(() => ({user, loading}), [user, loading]);
@@ -54,13 +55,13 @@ export function AuthProvider({children}: Readonly<{children: React.ReactNode}>){
     </AuthContext.Provider>
 
 }
-
-
-export const useAuth = ()=>{
-    if (AuthContext){
-        return useContext(AuthContext)
+export const useAuth = (): AuthContextValue => {
+    const context = useContext(AuthContext);
+    
+    // 💡 Guard against missing provider and narrow type from null | AuthContextValue to AuthContextValue
+    if (!context) {
+        throw new Error("useAuth must be used within an AuthProvider");
     }
-    else{
-        return null;
-    }
-}
+    
+    return context;
+};

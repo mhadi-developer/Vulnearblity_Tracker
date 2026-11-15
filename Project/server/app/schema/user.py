@@ -13,15 +13,28 @@ class UserCreateResponse(BaseModel):
     password: str = Field(min_length=8, max_length=255)
     
     
-class UserResponse(BaseModel):
+    
+class RoleResponse(BaseModel):
+    id: int
+    role_title: str
+
     model_config = ConfigDict(from_attributes=True)
     
+class UserResponse(BaseModel):
     id: int
-    full_name:str
+    full_name: str
     user_name: str
-    email: EmailStr
+    email: str
     created_at: datetime
-    
+    role_id: int | None
+    role: RoleResponse | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UsersListResponse(BaseModel):
+    message: str
+    users: list[UserResponse]
     
 class UserLoginRequest(BaseModel):
     model_config = ConfigDict(form_attribute=True)

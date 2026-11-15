@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
-from .routers import auth, user
+from .routers import auth, user, admin
 
 
 
@@ -38,8 +38,12 @@ app.add_middleware(
 )
 
 
-app.include_router(auth.router, prefix="/api/v1", tags=["Authentication Routes"])
-app.include_router(user.router, prefix="/api/v1", tags=["User Routes"])
+BASE_ROUTE="/api/v1"
+
+app.include_router(auth.router, prefix=BASE_ROUTE, tags=["Authentication Routes"])
+app.include_router(user.router, prefix=BASE_ROUTE, tags=["User Routes"])
+app.include_router(admin.router, prefix=BASE_ROUTE, tags=["Admin Routes"])
+
 
     
 @app.get("/")

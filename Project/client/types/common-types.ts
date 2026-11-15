@@ -45,3 +45,34 @@ export interface Endpoint {
   path: string;
   note: string;
 }
+
+
+export type loginUserType = {
+ full_name:string,
+ user_name:string,
+ email:string,
+ id:number,
+ created_at:string,
+ role: string,
+ role_id: number
+}
+
+
+/* 
+created_at
+: 
+"2026-11-13T18:57:08.038535+00:00"
+email
+: 
+"hadiquershi08@gmail.com"
+full_name
+: 
+"Muhammad Hadi"
+id
+: 
+1
+user_name
+: 
+"hadi_dev_03"
+
+*/

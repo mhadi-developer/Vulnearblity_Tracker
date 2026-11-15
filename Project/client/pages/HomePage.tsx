@@ -6,12 +6,12 @@ import Icon from "../components/Icon";
 import Reveal from "../components/Reveal";
 import { useInView } from "../hooks/useInView";
 import { useCountUp } from "../hooks/useCountUp";
+import {useAuth} from "@/context/AuthContext"
 import {
   CODE_SAMPLE,
   ENDPOINTS,
   FEATURES,
   FOOTER_LINKS,
-  NAV_LINKS,
   SAMPLE_FINDINGS,
   SEVERITIES,
   STATS,
@@ -28,6 +28,31 @@ function Hero() {
   const total = SEVERITIES?.reduce((sum, s) => sum + s.count, 0);
   const [ref, seen] = useInView<HTMLDivElement>(0.3);
   const shownTotal = useCountUp(total, seen);
+  const {user} = useAuth()
+  let userActions = (
+    <>
+      <a className="btn btn-primary btn-lg" href="/register?tab=register">Create your account</a>
+      <a className="btn btn-secondary btn-lg" href="#features">See how it works</a>
+    </>
+  );
+
+  if (user) {
+    if (user.role === "Admin" && user.role_id === 1) {
+      userActions = (
+        <>
+          <a className="btn btn-primary btn-lg" href="/dashboard">See All Findings</a>
+          <a className="btn btn-secondary btn-lg" href="/admin/role-managment">Assign User Roles</a>
+        </>
+      );
+    } else {
+      userActions = (
+        <>
+          <a className="btn btn-primary btn-lg" href="/dashboard">See All Findings</a>
+          <a className="btn btn-secondary btn-lg" href="/set-by-user">Finding Fix By You</a>
+        </>
+      );
+    }
+  }
 
   return (
     <section className="container hp-hero" aria-labelledby="hero-title">
@@ -42,8 +67,7 @@ function Hero() {
           workflow, and see your risk at a glance. Built on a secure, tested REST API.
         </p>
         <div className="hp-cta">
-          <a className="btn btn-primary btn-lg" href="/register?tab=register">Create your account</a>
-          <a className="btn btn-secondary btn-lg" href="#features">See how it works</a>
+          {userActions}
         </div>
         <ul className="hp-trust">
           <li>Role-based access</li>

@@ -12,12 +12,6 @@ import type {
 
 /* Sample content. Replace with real data from the API later. */
 
-export const NAV_LINKS: NavLink[] = [
-  { href: "#features", label: "Features" },
-  { href: "#workflow", label: "Workflow" },
-  { href: "#api", label: "API" },
-];
-
 export const FOOTER_LINKS: NavLink[] = [
   { href: "/login", label: "Sign in" },
   { href: "/docs", label: "API docs" },

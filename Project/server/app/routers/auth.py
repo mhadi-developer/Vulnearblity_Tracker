@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, status , HTTPException, Response, Cookie
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from typing import Annotated
 from datetime import datetime, timedelta, timezone
 import jwt
@@ -54,6 +55,7 @@ async def register_user(user_data:UserCreateResponse, db:Annotated[AsyncSession,
         user_name= user_data.user_name,
         email=user_data.email,
         password = hashed_user_password,
+        
     )
     
     db.add(new_user)
@@ -71,7 +73,7 @@ async def register_user(user_data:UserCreateResponse, db:Annotated[AsyncSession,
 
 @router.post('/login', status_code=status.HTTP_200_OK)
 async def login_user(user_data:UserLoginRequest , db:Annotated[AsyncSession, Depends(get_db)], response:Response):
-    result = await db.execute(select(User).where(User.email == user_data.email))
+    result = await db.execute(select(User).options(selectinload(User.role)).where(User.email == user_data.email))
     user_found_by_email = result.scalars().first()
     
     if not (user_found_by_email or verify_password(user_data.password, user_found_by_email.password)):
@@ -80,7 +82,7 @@ async def login_user(user_data:UserLoginRequest , db:Annotated[AsyncSession, Dep
             detail="Incorrect email or password"
         )
         
-    token_payload={"sub":str(user_found_by_email.id), "email":user_found_by_email.email , "username":user_found_by_email.user_name, "fullname":user_found_by_email.full_name, "created_at":str(user_found_by_email.created_at)}
+    token_payload={"sub":str(user_found_by_email.id), "email":user_found_by_email.email , "username":user_found_by_email.user_name, "fullname":user_found_by_email.full_name,"role":user_found_by_email.role.role_title, "role_id":user_found_by_email.role.id, "created_at":str(user_found_by_email.created_at)}
     access_token = create_access_token(token_payload)
     
     response.set_cookie(
@@ -135,7 +137,7 @@ async def get_current_user( db:Annotated[AsyncSession, Depends(get_db)],NEXUS_ST
     )
         
         
-    result = await db.execute(select(User).where(User.id == user_id))
+    result = await db.execute(select(User).options(selectinload(User.role)).where(User.id == user_id))
     user = result.scalar_one_or_none()
     
     if not user:
@@ -149,7 +151,9 @@ async def get_current_user( db:Annotated[AsyncSession, Depends(get_db)],NEXUS_ST
         "email" : user.email,
         "created_at" : user.created_at,
         "full_name" :  user.full_name,
-        "user_name" :  user.user_name
+        "user_name" :  user.user_name,
+        "role": user.role.role_title,
+        "role_id": user.role.id
     }
         
     return response_user
