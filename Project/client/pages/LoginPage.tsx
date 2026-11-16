@@ -62,7 +62,7 @@ export default function Login() {
       } catch {
         /* storage unavailable */
       }
-      router.push("/");
+     window.location.href = "/"
     } catch {
       setFormError("Cannot reach the server. Check that the API is running.");
     } finally {

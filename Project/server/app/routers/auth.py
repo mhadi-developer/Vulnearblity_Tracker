@@ -82,7 +82,7 @@ async def login_user(user_data:UserLoginRequest , db:Annotated[AsyncSession, Dep
             detail="Incorrect email or password"
         )
         
-    token_payload={"sub":str(user_found_by_email.id), "email":user_found_by_email.email , "username":user_found_by_email.user_name, "fullname":user_found_by_email.full_name,"role":user_found_by_email.role.role_title, "role_id":user_found_by_email.role.id, "created_at":str(user_found_by_email.created_at)}
+    token_payload={"sub":str(user_found_by_email.id), "email":user_found_by_email.email , "username":user_found_by_email.user_name, "fullname":user_found_by_email.full_name,"role":user_found_by_email.role.role_title if user_found_by_email.role else None, "role_id":user_found_by_email.role.id if user_found_by_email.role else None, "created_at":str(user_found_by_email.created_at)}
     access_token = create_access_token(token_payload)
     
     response.set_cookie(
@@ -152,8 +152,8 @@ async def get_current_user( db:Annotated[AsyncSession, Depends(get_db)],NEXUS_ST
         "created_at" : user.created_at,
         "full_name" :  user.full_name,
         "user_name" :  user.user_name,
-        "role": user.role.role_title,
-        "role_id": user.role.id
+        "role": user.role.role_title if user.role else  None,
+        "role_id": user.role.id if user.role else None
     }
         
     return response_user

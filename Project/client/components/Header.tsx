@@ -1,5 +1,6 @@
 "use client";
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Icon from "./Icon";
 import type { NavLink } from "../types/common-types";
 import "../styles/common.css";
@@ -36,8 +37,11 @@ export default function Header({
   homeHref = "/",
   signInHref = "/login",
 }: HeaderProps) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const router = useRouter();
   const profileDialogRef = useRef<HTMLDialogElement>(null);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const displayName = user?.full_name || user?.user_name || user?.email || "";
   const initials = displayName
     .split(/\s+/)
@@ -52,6 +56,22 @@ export default function Header({
     if (dialog && !dialog.open) dialog.showModal();
   };
   const closeProfile = () => profileDialogRef.current?.close();
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    setLogoutError(null);
+
+    try {
+      await logout();
+      closeProfile();
+      router.replace("/login");
+    } catch (error: unknown) {
+      setLogoutError(
+        error instanceof Error ? error.message : "Unable to log out. Please try again."
+      );
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <header className="glass-navbar site-header">
@@ -160,6 +180,21 @@ export default function Header({
                   </div>
                 </dl>
               </section>
+              <div className="site-header__profile-actions">
+                {logoutError && (
+                  <p className="site-header__logout-error" role="alert">
+                    {logoutError}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                >
+                  {isLoggingOut ? "Logging out..." : "Log out"}
+                </button>
+              </div>
             </dialog>
           </div>
         ) : (

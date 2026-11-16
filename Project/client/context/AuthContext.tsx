@@ -1,11 +1,12 @@
 "use client";
 
-import {useContext , createContext , useState, useEffect, useMemo} from "react";
+import {useContext , createContext , useState, useEffect, useMemo, useCallback} from "react";
 import type { loginUserType } from "@/types/common-types";
 
 type AuthContextValue = {
     user: loginUserType | null;
     loading: boolean;
+    logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -47,8 +48,20 @@ export function AuthProvider({children}: Readonly<{children: React.ReactNode}>){
         };
     }, []);
 
+    const logout = useCallback(async () => {
+        const response = await fetch(`${APP_URL}/auth/logout`, {
+            method: "POST",
+            credentials: "include",
+        });
 
-    const contextValue = useMemo(() => ({user, loading}), [user, loading]);
+        if (!response.ok) {
+            throw new Error("Unable to log out. Please try again.");
+        }
+
+        setUser(null);
+    }, []);
+
+    const contextValue = useMemo(() => ({user, loading, logout}), [user, loading, logout]);
 
     return <AuthContext.Provider value={contextValue}>
          {children}

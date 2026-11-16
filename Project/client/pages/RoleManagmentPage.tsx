@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
@@ -30,11 +29,6 @@ interface UsersApiResponse {
   users: UserRecord[];
 }
 
-interface RolesApiResponse {
-  message: string;
-  roles: Role[];
-}
-
 type FilterType =
   | "ALL"
   | "UNASSIGNED"
@@ -42,9 +36,7 @@ type FilterType =
   | "Developer"
   | "Analyst";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_BACKEND_API_URL ||
-  "http://localhost:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 
 // ==========================================
 // MAIN COMPONENT
@@ -63,12 +55,10 @@ export default function RoleManagementPage() {
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilter, setActiveFilter] =
-    useState<FilterType>("ALL");
+  const [activeFilter, setActiveFilter] = useState<FilterType>("ALL");
 
   // Role assignment
-  const [updatingUserId, setUpdatingUserId] =
-    useState<number | null>(null);
+  const [updatingUserId, setUpdatingUserId] = useState<number | null>(null);
 
   // Toast
   const [toast, setToast] = useState<{
@@ -86,19 +76,13 @@ export default function RoleManagementPage() {
         setUsersLoading(true);
         setUsersError(null);
 
-        const response = await fetch(
-          `${API_BASE_URL}/admin/users`,
-          {
-            credentials: "include",
-          }
-        );
+        const response = await fetch(`${API_BASE_URL}/admin/users`, {
+          credentials: "include",
+        });
 
         if (!response.ok) {
           throw new Error("Failed to fetch users.");
         }
-
-        // Expected response:
-        // { message: "all users fetched", users: [...] }
 
         const data: UsersApiResponse = await response.json();
 
@@ -107,15 +91,11 @@ export default function RoleManagementPage() {
         }
 
         setUsers(data.users);
-
       } catch (error: unknown) {
         const message =
-          error instanceof Error
-            ? error.message
-            : "Unable to fetch users.";
+          error instanceof Error ? error.message : "Unable to fetch users.";
 
         setUsersError(message);
-
       } finally {
         setUsersLoading(false);
       }
@@ -134,36 +114,26 @@ export default function RoleManagementPage() {
         setRolesLoading(true);
         setRolesError(null);
 
-        const response = await fetch(
-          `${API_BASE_URL}/admin/roles`,
-          {
-            credentials: "include",
-          }
-        );
+        const response = await fetch(`${API_BASE_URL}/admin/roles`, {
+          credentials: "include",
+        });
 
         if (!response.ok) {
           throw new Error("Failed to fetch roles.");
         }
 
-        // Expected response:
-        // { message: "all roles fetched", roles: [...] }
+        const data: Role[] = await response.json();
 
-        const data: RolesApiResponse = await response.json();
-
-        if (!Array.isArray(data.roles)) {
+        if (!Array.isArray(data)) {
           throw new Error("Invalid roles API response.");
         }
 
-        setRoles(data.roles);
-
+        setRoles(data);
       } catch (error: unknown) {
         const message =
-          error instanceof Error
-            ? error.message
-            : "Unable to fetch roles.";
+          error instanceof Error ? error.message : "Unable to fetch roles.";
 
         setRolesError(message);
-
       } finally {
         setRolesLoading(false);
       }
@@ -179,8 +149,7 @@ export default function RoleManagementPage() {
   const developerRole = useMemo(
     () =>
       roles.find(
-        (role) =>
-          role.role_title.toLowerCase() === "developer"
+        (role) => role.role_title.toLowerCase() === "developer"
       ),
     [roles]
   );
@@ -188,14 +157,13 @@ export default function RoleManagementPage() {
   const analystRole = useMemo(
     () =>
       roles.find(
-        (role) =>
-          role.role_title.toLowerCase() === "analyst"
+        (role) => role.role_title.toLowerCase() === "analyst"
       ),
     [roles]
   );
 
   // ==========================================
-  // ASSIGN USER ROLE
+  // ASSIGN USER ROLE (SENDS role_id IN JSON BODY)
   // ==========================================
 
   const handleAssignRole = async (
@@ -207,7 +175,6 @@ export default function RoleManagementPage() {
         type: "error",
         message: "Target role is not available.",
       });
-
       return;
     }
 
@@ -216,28 +183,32 @@ export default function RoleManagementPage() {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/admin/users/${userId}/role?role_id=${targetRole.id}`,
+        `${API_BASE_URL}/admin/users/${userId}/role`,
         {
           method: "PATCH",
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
+          body: JSON.stringify({
+            role_id: targetRole.id,
+          }),
         }
       );
 
       if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => null);
+        const errorData = await response.json().catch(() => null);
+        const detail =
+          typeof errorData?.detail === "string"
+            ? errorData.detail
+            : Array.isArray(errorData?.detail)
+            ? errorData.detail[0]?.msg
+            : null;
 
-        throw new Error(
-          errorData?.detail || "Failed to update user role."
-        );
+        throw new Error(detail || "Failed to update user role.");
       }
 
       // Update local state
-
       setUsers((previousUsers) =>
         previousUsers.map((user) =>
           user.id === userId
@@ -254,18 +225,14 @@ export default function RoleManagementPage() {
         type: "success",
         message: `Assigned "${targetRole.role_title}" successfully.`,
       });
-
     } catch (error: unknown) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Role update failed.";
+        error instanceof Error ? error.message : "Role update failed.";
 
       setToast({
         type: "error",
         message,
       });
-
     } finally {
       setUpdatingUserId(null);
     }
@@ -286,7 +253,7 @@ export default function RoleManagementPage() {
 
       if (!matchesSearch) return false;
 
-      const roleTitle = user.role?.role_title.toLowerCase();
+      const roleTitle = user.role?.role_title?.toLowerCase();
 
       if (activeFilter === "UNASSIGNED") {
         return user.role_id === null;
@@ -319,7 +286,7 @@ export default function RoleManagementPage() {
     let analysts = 0;
 
     users.forEach((user) => {
-      const title = user.role?.role_title.toLowerCase();
+      const title = user.role?.role_title?.toLowerCase();
 
       if (!title) {
         unassigned++;
@@ -374,14 +341,10 @@ export default function RoleManagementPage() {
   return (
     <main className="role-page">
       <div className="container">
-
         {/* HEADER & METRICS */}
-
         <header className="role-header">
           <div>
-            <h1 className="role-title">
-              User Role Assignment
-            </h1>
+            <h1 className="role-title">User Role Assignment</h1>
 
             <p className="role-subtitle">
               Assign registered accounts to Developer or Analyst access tiers.
@@ -389,7 +352,6 @@ export default function RoleManagementPage() {
           </div>
 
           <div className="role-stats">
-
             <div className="stat-pill">
               <span>Total:</span>
               <strong>{counts.total}</strong>
@@ -414,12 +376,10 @@ export default function RoleManagementPage() {
               <span>Analysts:</span>
               <strong>{counts.analysts}</strong>
             </div>
-
           </div>
         </header>
 
         {/* API STATUS */}
-
         {rolesError && (
           <div className="toast-banner error" role="alert">
             Roles unavailable: {rolesError}
@@ -433,9 +393,7 @@ export default function RoleManagementPage() {
         )}
 
         {/* SEARCH & FILTERS */}
-
         <section className="role-controls">
-
           <input
             type="text"
             className="search-input"
@@ -474,16 +432,11 @@ export default function RoleManagementPage() {
               </button>
             ))}
           </div>
-
         </section>
 
         {/* TOAST */}
-
         {toast && (
-          <div
-            className={`toast-banner ${toast.type}`}
-            role="status"
-          >
+          <div className={`toast-banner ${toast.type}`} role="status">
             <span>{toast.message}</span>
 
             <button
@@ -504,54 +457,36 @@ export default function RoleManagementPage() {
         )}
 
         {/* USERS GRID */}
-
         {usersLoading ? (
-          <div className="empty-state">
-            Loading registered users...
-          </div>
+          <div className="empty-state">Loading registered users...</div>
         ) : usersError ? (
-          <div className="empty-state">
-            Unable to load registered users.
-          </div>
+          <div className="empty-state">Unable to load registered users.</div>
         ) : filteredUsers.length === 0 ? (
           <div className="empty-state">
             No registered users match the current filter.
           </div>
         ) : (
-
           <section className="users-grid">
-
             {filteredUsers.map((user) => {
-              const currentRoleTitle =
-                user.role?.role_title.toLowerCase();
+              const currentRoleTitle = user.role?.role_title?.toLowerCase();
 
               const isDev = currentRoleTitle === "developer";
               const isAnalyst = currentRoleTitle === "analyst";
               const isAdmin = currentRoleTitle === "admin";
 
-              const isUpdating =
-                updatingUserId === user.id;
+              const isUpdating = updatingUserId === user.id;
 
               return (
-                <article
-                  key={user.id}
-                  className="user-card lift"
-                >
-
+                <article key={user.id} className="user-card lift">
                   {/* USER IDENTITY */}
-
                   <div className="user-card-top">
-
                     <div className="user-identity">
-
                       <div className="user-avatar">
                         {getInitials(user.full_name)}
                       </div>
 
                       <div>
-                        <h2 className="user-name">
-                          {user.full_name}
-                        </h2>
+                        <h2 className="user-name">{user.full_name}</h2>
 
                         <p className="user-handle">
                           @{user.user_name} · {user.email}
@@ -561,11 +496,9 @@ export default function RoleManagementPage() {
                           Joined: {formatDate(user.created_at)}
                         </p>
                       </div>
-
                     </div>
 
                     {/* ROLE BADGE */}
-
                     <span
                       className={`role-badge ${
                         isAdmin
@@ -579,19 +512,13 @@ export default function RoleManagementPage() {
                     >
                       {user.role?.role_title || "Unassigned"}
                     </span>
-
                   </div>
 
                   {/* ROLE ASSIGNMENT */}
-
                   <div className="user-card-actions">
-
-                    <span className="action-label">
-                      Assign Role:
-                    </span>
+                    <span className="action-label">Assign Role:</span>
 
                     <div className="role-toggle-group">
-
                       <button
                         type="button"
                         disabled={
@@ -606,15 +533,10 @@ export default function RoleManagementPage() {
                           isDev ? "selected-dev" : ""
                         }`}
                         onClick={() =>
-                          handleAssignRole(
-                            user.id,
-                            developerRole
-                          )
+                          handleAssignRole(user.id, developerRole)
                         }
                       >
-                        {isUpdating && !isDev
-                          ? "Updating..."
-                          : "Developer"}
+                        {isUpdating && !isDev ? "Updating..." : "Developer"}
                       </button>
 
                       <button
@@ -628,22 +550,14 @@ export default function RoleManagementPage() {
                           isAdmin
                         }
                         className={`btn role-btn ${
-                          isAnalyst
-                            ? "selected-analyst"
-                            : ""
+                          isAnalyst ? "selected-analyst" : ""
                         }`}
                         onClick={() =>
-                          handleAssignRole(
-                            user.id,
-                            analystRole
-                          )
+                          handleAssignRole(user.id, analystRole)
                         }
                       >
-                        {isUpdating && !isAnalyst
-                          ? "Updating..."
-                          : "Analyst"}
+                        {isUpdating && !isAnalyst ? "Updating..." : "Analyst"}
                       </button>
-
                     </div>
 
                     {rolesLoading && (
@@ -658,16 +572,12 @@ export default function RoleManagementPage() {
                           Developer and Analyst roles are not configured.
                         </small>
                       )}
-
                   </div>
-
                 </article>
               );
             })}
-
           </section>
         )}
-
       </div>
     </main>
   );

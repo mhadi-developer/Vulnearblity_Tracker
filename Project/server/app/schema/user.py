@@ -42,3 +42,7 @@ class UserLoginRequest(BaseModel):
     email: EmailStr = Field(min_length=5 , max_length=100)
     password:str = Field(min_length=6, max_length=255)
     
+
+
+class UpdateRoleRequest(BaseModel):
+    role_id: int
