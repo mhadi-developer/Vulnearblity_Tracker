@@ -11,5 +11,5 @@ export default function DashBoardPageRouter() {
   if (loading) return <Loader label="Loading your dashboard..." size="large" />;
   if (!user?.email) return redirect("/login");
 
-  return <Dashboard />;
+  return <Dashboard  loginUser={user} />;
 }

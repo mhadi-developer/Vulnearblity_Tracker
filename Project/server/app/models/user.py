@@ -2,9 +2,26 @@ from datetime import datetime
 from sqlalchemy import String , Integer , DateTime , func, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..database import Base
-from typing import Optional
+from typing import Optional, List
 
 
+
+
+ 
+class Findings(Base):
+     __tablename__ = "findings_table"
+     id:Mapped[int]=mapped_column(Integer, primary_key=True , index=True )
+     title:Mapped[str] = mapped_column(String(120), nullable=False)
+     description:Mapped[str] = mapped_column(String(500), nullable=True)
+     severity:Mapped[str] = mapped_column(String(50), nullable=False, default="medium")
+     status:Mapped[str] = mapped_column(String(50), nullable=False, default="open")
+     review_status:Mapped[str] = mapped_column(String(50), nullable=False, default="review_pending") # review_pending, reviewed_fixed
+     owner_id:Mapped[str] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+     
+     owner = relationship("User", back_populates="findings")
+     
+     
+     
 
 class UserRoles(Base):
  __tablename__ ="user_roles"
@@ -36,3 +53,7 @@ nullable=True,
 index=True)
 
  role: Mapped[Optional["UserRoles"]] = relationship(back_populates="users")
+ findings: Mapped[List["Findings"]] = relationship(back_populates="owner")
+ 
+ 
+ 

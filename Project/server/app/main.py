@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
-from .routers import auth, user, admin
+from .routers import auth, user, admin, finding
 
 
 
@@ -43,6 +43,8 @@ BASE_ROUTE="/api/v1"
 app.include_router(auth.router, prefix=BASE_ROUTE, tags=["Authentication Routes"])
 app.include_router(user.router, prefix=BASE_ROUTE, tags=["User Routes"])
 app.include_router(admin.router, prefix=BASE_ROUTE, tags=["Admin Routes"])
+app.include_router(finding.router, prefix=BASE_ROUTE, tags=["Findings Routes"])
+
 
 
     

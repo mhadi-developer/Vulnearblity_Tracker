@@ -1,6 +1,7 @@
 import re 
 from datetime import datetime
 from pydantic import BaseModel , ConfigDict , EmailStr,  Field, field_validator 
+from typing import Optional
 
 
 
@@ -46,3 +47,26 @@ class UserLoginRequest(BaseModel):
 
 class UpdateRoleRequest(BaseModel):
     role_id: int
+    
+    
+
+
+
+
+class FindingCreate(BaseModel):
+    title: str = Field(..., min_length=5, max_length=120, description="Finding title between 5 and 120 characters")
+    description: Optional[str] = Field(None, max_length=2000, description="Detailed description of the vulnerability")
+    severity: str = Field(..., description="Severity level: critical, high, medium, or low")
+    owner_id: int = Field(..., description="ID of the user assigned to own this finding")
+
+class FindingResponse(BaseModel):
+    id: int
+    title: str
+    description: Optional[str]
+    severity: str
+    status: str
+    review_status: str
+    owner_id: int
+
+    class Config:
+        from_attributes = True # Enables conversion from SQLAlchemy models (Pydantic v2)
