@@ -73,3 +73,7 @@ class FindingResponse(BaseModel):
         
 class StatusUpdateSchema(BaseModel):
     status: Literal["open", "in_progress", "resolved", "closed"]
+    
+    
+class ReviewStatusUpdateSchema(BaseModel):
+    review_status: Literal["review_pending", "reviewed_fixed"]

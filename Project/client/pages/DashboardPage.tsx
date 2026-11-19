@@ -479,10 +479,11 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
     }
 
     try {
-      const res = await fetch(`/api/findings/${f.id}/review-status`, {
+      const res = await fetch(`${BASE_URL}/finding/${f.id}/review-status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ review_status: nextReviewStatus })
+        body: JSON.stringify({ review_status: nextReviewStatus }),
+        credentials:"include"
       });
       if (!res.ok) throw new Error("Failed update review status");
 
