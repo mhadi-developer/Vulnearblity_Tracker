@@ -1,7 +1,7 @@
 import re 
 from datetime import datetime
 from pydantic import BaseModel , ConfigDict , EmailStr,  Field, field_validator 
-from typing import Optional
+from typing import Optional, Literal
 
 
 
@@ -70,3 +70,6 @@ class FindingResponse(BaseModel):
 
     class Config:
         from_attributes = True # Enables conversion from SQLAlchemy models (Pydantic v2)
+        
+class StatusUpdateSchema(BaseModel):
+    status: Literal["open", "in_progress", "resolved", "closed"]

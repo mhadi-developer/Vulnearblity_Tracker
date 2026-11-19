@@ -295,7 +295,7 @@ pre,
 }
 
 .btn-secondary {
-  background: var(--surface-glass);
+  background: var(--bg-base);
   border-color: var(--border-glass);
   color: var(--text-primary);
   -webkit-backdrop-filter: blur(12px);
@@ -303,7 +303,7 @@ pre,
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: var(--surface-glass-strong);
+  background: var(--indigo);
   border-color: var(--border-glass-strong);
 }
 

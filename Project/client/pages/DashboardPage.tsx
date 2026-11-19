@@ -428,7 +428,7 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
         setItems((prev) => [created, ...prev]);
         notify("Finding added");
       } else {
-        const res = await fetch(`/api/findings/${id}`, {
+        const res = await fetch(`${BASE_URL}/api/findings/${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data)
@@ -456,10 +456,11 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
     }
 
     try {
-      const res = await fetch(`/api/findings/${f.id}/status`, {
+      const res = await fetch(`${BASE_URL}/finding/${f.id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: next })
+        body: JSON.stringify({ status: next }),
+        credentials:"include"
       });
       if (!res.ok) throw new Error("Failed update status");
       
