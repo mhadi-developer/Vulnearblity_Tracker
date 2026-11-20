@@ -2,7 +2,7 @@ import re
 from datetime import datetime
 from pydantic import BaseModel , ConfigDict , EmailStr,  Field, field_validator 
 from typing import Optional, Literal
-
+from enum import Enum
 
 
 class UserCreateResponse(BaseModel):
@@ -52,6 +52,25 @@ class UpdateRoleRequest(BaseModel):
 
 
 
+class Severity(str , Enum):
+    critical = "critical"
+    high = "high"
+    medium = "medium"
+    low = "low"
+    
+
+class Status(str , Enum):
+    open = "open"
+    in_progress = "in_progress"
+    resolved = "resolved"
+    closed = "closed"
+    
+    
+    
+class ReviewStatus(str, Enum):
+    review_pending = "review_pending"
+    reviewed_fixed = "reviewed_fixed"
+
 
 class FindingCreate(BaseModel):
     title: str = Field(..., min_length=5, max_length=120, description="Finding title between 5 and 120 characters")
@@ -77,3 +96,26 @@ class StatusUpdateSchema(BaseModel):
     
 class ReviewStatusUpdateSchema(BaseModel):
     review_status: Literal["review_pending", "reviewed_fixed"]
+
+
+
+class FindingUpdate(BaseModel):
+    title:str = Field(..., min_length=5 , max_length=100)
+    description:str = Field(default="", max_length=2000)
+    severity:Severity
+    owner_id: int = Field(..., gt=0)
+    status: Status
+    review_status: ReviewStatus
+    
+    
+class FindingUpdateResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    title: str
+    description: str
+    severity: Severity
+    status: Status
+    review_status: ReviewStatus
+    owner_id: int
+    

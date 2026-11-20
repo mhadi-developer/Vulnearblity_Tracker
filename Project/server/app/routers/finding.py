@@ -8,7 +8,7 @@ from sqlalchemy import select
 from ..database import get_db
 from ..models.user import User, Findings
 from ..routers.auth import get_current_user
-from ..schema.user import FindingResponse, FindingCreate, StatusUpdateSchema, ReviewStatusUpdateSchema
+from ..schema.user import FindingResponse, FindingCreate, StatusUpdateSchema, ReviewStatusUpdateSchema, FindingUpdateResponse, FindingUpdate
 
 
 
@@ -144,7 +144,45 @@ async def update_finding_review_status(finding_id:int , payload:ReviewStatusUpda
     db.refresh(finding)
     return {"message":"reveiw status updated" , "reveiew_status": finding.review_status}
     
+# -------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+@router.put('/update/{finding_id}', response_model=FindingUpdateResponse, status_code = status.HTTP_201_CREATED)
+async def update_finding_by_id(finding_id:int , payload:FindingUpdate , db:Annotated[AsyncSession, Depends(get_db)], current_user:Annotated[User, Depends(get_current_user)]):
+    user_role = current_user["role"].lower()
+    if user_role not in ["analyst", "admin"]:
+        raise HTTPException(
+            status_code= status.HTTP_401_UNAUTHORIZED,
+            detail="You are not allowed to perform this task"
+        )
+    statement = await db.execute(select(Findings).where(Findings.id == finding_id))
+    finding_found = statement.scalars().first()
     
+    if not finding_found:
+        raise HTTPException(
+            status_code = status.HTTP_403_FORBIDDEN,
+            detail="Requested findning not found , invalid ID"
+        )
+    
+    
+
+    finding_found.title = payload.title.strip()
+    finding_found.description= payload.description.strip()
+    finding_found.owner_id = payload.owner_id
+    finding_found.status = payload.status
+    finding_found.review_status = payload.review_status
+    finding_found.severity = payload.severity  
+    
+    
+    await db.commit()
+    await db.refresh(finding_found)
+    return finding_found
+    
+    
+    
+    
+  
     
     
     

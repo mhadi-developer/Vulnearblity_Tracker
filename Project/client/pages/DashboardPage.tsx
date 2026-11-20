@@ -6,7 +6,6 @@ import "../styles/dashboard-page.css";
 import { loginUserType } from "@/types/common-types";
 import { useAuth } from "@/context/AuthContext";
 
-
 /* =========================================================
    Types and rules
    ========================================================= */
@@ -16,7 +15,14 @@ type Status = "open" | "in_progress" | "resolved" | "closed";
 type ReviewStatus = "review_pending" | "reviewed_fixed";
 type Role = "admin" | "analyst" | "developer" | null;
 
-interface User { id: number; full_name: string; user_name:string; email: string; role: Role }
+interface User {
+  id: number;
+  full_name: string;
+  user_name: string;
+  email: string;
+  role: Role;
+}
+
 interface Finding {
   id: number;
   title: string;
@@ -56,7 +62,12 @@ const NEXT_STATUS: Record<Status, Status[]> = {
 const PAGE_SIZE = 6;
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const initials = (name: string) =>
-  name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "?";
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join("") || "?";
 
 /* Damped spring so the counters settle with a small bounce */
 const Z = 0.6;
@@ -96,7 +107,17 @@ function useCountUp(target: number): number {
    Summary tile
    ========================================================= */
 
-function Tile({ label, count, total, tone }: { label: string; count: number; total: number; tone: string }) {
+function Tile({
+  label,
+  count,
+  total,
+  tone,
+}: {
+  label: string;
+  count: number;
+  total: number;
+  tone: string;
+}) {
   const shown = useCountUp(count);
   const share = total ? Math.round((count / total) * 100) : 0;
   return (
@@ -119,11 +140,18 @@ interface DialogProps {
   open: boolean;
   finding: Finding | null;
   users: User[];
+  saving: boolean;
   onClose: () => void;
-  onSave: (id: number | null, data: Omit<Finding, "id" | "status" | "review_status"> & { status?: Status; review_status?: ReviewStatus }) => void;
+  onSave: (
+    id: number | null,
+    data: Omit<Finding, "id" | "status" | "review_status"> & {
+      status?: Status;
+      review_status?: ReviewStatus;
+    }
+  ) => Promise<void>;
 }
 
-function FindingDialog({ open, finding, users, onClose, onSave }: DialogProps) {
+function FindingDialog({ open, finding, users, saving, onClose, onSave }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -151,8 +179,9 @@ function FindingDialog({ open, finding, users, onClose, onSave }: DialogProps) {
     setErrors({});
   }, [open, finding, users]);
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (saving) return;
     const t = title.trim();
     const next = {
       title: t.length < 5 || t.length > 120 ? "Title must be between 5 and 120 characters." : undefined,
@@ -160,7 +189,7 @@ function FindingDialog({ open, finding, users, onClose, onSave }: DialogProps) {
     };
     setErrors(next);
     if (next.title || next.description) return;
-    onSave(finding?.id ?? null, {
+    await onSave(finding?.id ?? null, {
       title: t,
       description: description.trim(),
       severity,
@@ -177,8 +206,12 @@ function FindingDialog({ open, finding, users, onClose, onSave }: DialogProps) {
       ref={ref}
       className="dash__dlg"
       aria-labelledby="dash-dlg-title"
-      onClose={onClose}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClose={() => {
+        if (!saving) onClose();
+      }}
+      onClick={(e) => {
+        if (!saving && e.target === e.currentTarget) onClose();
+      }}
     >
       <form className="dash__dlg-card glass-modal" onSubmit={handleSubmit} noValidate>
         <h2 id="dash-dlg-title">{finding ? "Edit finding" : "New finding"}</h2>
@@ -189,11 +222,16 @@ function FindingDialog({ open, finding, users, onClose, onSave }: DialogProps) {
             id="dash-f-title"
             className="input"
             value={title}
+            disabled={saving}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="5 to 120 characters"
             aria-invalid={errors.title ? true : undefined}
           />
-          {errors.title && <p className="dash__error" role="alert">{errors.title}</p>}
+          {errors.title && (
+            <p className="dash__error" role="alert">
+              {errors.title}
+            </p>
+          )}
         </div>
 
         <div className={`dash__field ${errors.description ? "has-error" : ""}`}>
@@ -203,23 +241,48 @@ function FindingDialog({ open, finding, users, onClose, onSave }: DialogProps) {
             className="textarea"
             rows={4}
             value={description}
+            disabled={saving}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="What was found and where"
           />
-          {errors.description && <p className="dash__error" role="alert">{errors.description}</p>}
+          {errors.description && (
+            <p className="dash__error" role="alert">
+              {errors.description}
+            </p>
+          )}
         </div>
 
         <div className="dash__field-row">
           <div className="dash__field">
             <label htmlFor="dash-f-sev">Severity</label>
-            <select id="dash-f-sev" className="select" value={severity} onChange={(e) => setSeverity(e.target.value as Severity)}>
-              {SEVERITIES.map((s) => <option key={s} value={s}>{cap(s)}</option>)}
+            <select
+              id="dash-f-sev"
+              className="select"
+              value={severity}
+              disabled={saving}
+              onChange={(e) => setSeverity(e.target.value as Severity)}
+            >
+              {SEVERITIES.map((s) => (
+                <option key={s} value={s}>
+                  {cap(s)}
+                </option>
+              ))}
             </select>
           </div>
           <div className="dash__field">
             <label htmlFor="dash-f-owner">Owner</label>
-            <select id="dash-f-owner" className="select" value={ownerId} onChange={(e) => setOwnerId(Number(e.target.value))}>
-              {users.map((u) => <option key={u.id} value={u.id}>{u?.full_name}</option>)}
+            <select
+              id="dash-f-owner"
+              className="select"
+              value={ownerId}
+              disabled={saving}
+              onChange={(e) => setOwnerId(Number(e.target.value))}
+            >
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u?.full_name}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -228,23 +291,43 @@ function FindingDialog({ open, finding, users, onClose, onSave }: DialogProps) {
           <>
             <div className="dash__field">
               <label htmlFor="dash-f-status">Status</label>
-              <select id="dash-f-status" className="select" value={status} onChange={(e) => setStatus(e.target.value as Status)}>
-                {statusChoices.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+              <select
+                id="dash-f-status"
+                className="select"
+                value={status}
+                disabled={saving}
+                onChange={(e) => setStatus(e.target.value as Status)}
+              >
+                {statusChoices.map((s) => (
+                  <option key={s} value={s}>
+                    {STATUS_LABEL[s]}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="dash__field">
               <label htmlFor="dash-f-review">Review Status</label>
-              <select id="dash-f-review" className="select" value={reviewStatus} onChange={(e) => setReviewStatus(e.target.value as ReviewStatus)}>
-                <option value="review_pending">Review Pending</option>
-                <option value="reviewed_fixed">Reviewed Finding Fixed</option>
+              <select
+                id="dash-f-review"
+                className="select"
+                value={reviewStatus}
+                disabled={saving}
+                onChange={(e) => setReviewStatus(e.target.value as ReviewStatus)}
+              >
+                <option value="review_pending">{REVIEW_STATUS_LABEL.review_pending}</option>
+                <option value="reviewed_fixed">{REVIEW_STATUS_LABEL.reviewed_fixed}</option>
               </select>
             </div>
           </>
         )}
 
         <div className="dash__dlg-actions">
-          <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn btn-primary">Save finding</button>
+          <button type="button" className="btn btn-secondary" disabled={saving} onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="btn btn-primary" disabled={saving}>
+            {saving ? "saving..." : "Save finding"}
+          </button>
         </div>
       </form>
     </dialog>
@@ -269,13 +352,14 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Finding | null>(null);
+  const [saving, setSaving] = useState(false);
   const [confirmId, setConfirmId] = useState<number | null>(null);
   const [toast, setToast] = useState<{ id: number; text: string; kind: "success" | "error" } | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
 
   const { user } = useAuth();
   const BASE_URL = `${process.env.NEXT_PUBLIC_BACKEND_API_URL}`;
-  console.log({items})
+  console.log({ items });
 
   // Automatically derive the role from the AuthContext user, fallback prop, or default to developer
   const role: Role = useMemo(() => {
@@ -289,67 +373,70 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
 
   // Authenticated context user mapped by role
   const me = useMemo(() => {
-    return users.find((u) => u.role === role) || users[0] || { id: 1, name: user?.full_name || "Current User", email: user?.email || "user@example.com", role };
+    return (
+      users.find((u) => u.role === role) ||
+      users[0] || {
+        id: 1,
+        name: user?.full_name || "Current User",
+        email: user?.email || "user@example.com",
+        role,
+      }
+    );
   }, [users, role, user]);
 
   // Fetch initial data from APIs
-  async function fetchUser(){
+  async function fetchUser() {
     setLoading(true);
-    try{ 
-      const response = await fetch(`${BASE_URL}/user/get/developers`,{
-        method:"GET",
-        credentials:'include',
-        headers:{
-          "Content-Type":"application/json"
-        }
+    try {
+      const response = await fetch(`${BASE_URL}/user/get/developers`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
-      if(response.ok || response.status == 200){
+      if (response.ok || response.status == 200) {
         const data = await response.json();
         setUsers(data?.developers);
         setLoading(false);
       }
-    }catch(e){
-       console.log("error in fetching users", e);
-       setUsers([]);
-       setLoading(false);
-    }finally{
+    } catch (e) {
+      console.log("error in fetching users", e);
+      setUsers([]);
+      setLoading(false);
+    } finally {
       setLoading(false);
     }
-   }
+  }
 
-
-
-   async function get_findings(){
-    try{
+  async function get_findings() {
+    try {
       setLoading(true);
-      const response = await fetch(`${BASE_URL}/finding/get/all`,
-        {
-          method:"GET",
-          credentials:'include',
-          headers:{
-            "Content-Type":"application/json"
-          }
-        }
-      )
+      const response = await fetch(`${BASE_URL}/finding/get/all`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
-        if(response.ok || response.status ==200){
-          const data = await response.json();
-          setItems(data);
-          console.log({data})
-          setLoading(false)
-        }
-      
-    }catch(e){
-      console.log('error to fetch items/findings', e)
-    }finally{
-      setLoading(false)
+      if (response.ok || response.status == 200) {
+        const data = await response.json();
+        setItems(data);
+        console.log({ data });
+        setLoading(false);
+      }
+    } catch (e) {
+      console.log("error to fetch items/findings", e);
+    } finally {
+      setLoading(false);
     }
-   }
+  }
 
-   useEffect(()=>{
+  useEffect(() => {
     fetchUser();
-    get_findings()
-   },[]);
+    get_findings();
+  }, []);
 
   useEffect(() => setPage(1), [q, sev, status, owner, mineOnly]);
 
@@ -374,7 +461,10 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
   const counts = useMemo(() => {
     const bySev: Record<Severity, number> = { critical: 0, high: 0, medium: 0, low: 0 };
     const byStatus: Record<Status, number> = { open: 0, in_progress: 0, resolved: 0, closed: 0 };
-    items.forEach((f) => { bySev[f.severity] += 1; byStatus[f.status] += 1; });
+    items.forEach((f) => {
+      bySev[f.severity] += 1;
+      byStatus[f.status] += 1;
+    });
     return { bySev, byStatus };
   }, [items]);
 
@@ -394,12 +484,13 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    return items.filter((f) =>
-      (!sev || f.severity === sev) &&
-      (!status || f.status === status) &&
-      (owner === null || f.owner_id === owner) &&
-      (!mineOnly || f.owner_id === me.id) &&
-      (!needle || `${f.title} ${f.description}`.toLowerCase().includes(needle))
+    return items.filter(
+      (f) =>
+        (!sev || f.severity === sev) &&
+        (!status || f.status === status) &&
+        (owner === null || f.owner_id === owner) &&
+        (!mineOnly || f.owner_id === me.id) &&
+        (!needle || `${f.title} ${f.description}`.toLowerCase().includes(needle))
     );
   }, [items, q, sev, status, owner, mineOnly, me.id]);
 
@@ -411,27 +502,39 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
   /* ---------- actions via API ---------- */
 
   function clearFilters() {
-    setQ(""); setSev(""); setStatus(""); setOwner(null); setMineOnly(false);
+    setQ("");
+    setSev("");
+    setStatus("");
+    setOwner(null);
+    setMineOnly(false);
   }
 
-  async function saveFinding(id: number | null, data: Omit<Finding, "id" | "status" | "review_status"> & { status?: Status; review_status?: ReviewStatus }) {
+  async function saveFinding(
+    id: number | null,
+    data: Omit<Finding, "id" | "status" | "review_status"> & {
+      status?: Status;
+      review_status?: ReviewStatus;
+    }
+  ) {
+    setSaving(true);
     try {
       if (id === null) {
         const res = await fetch(`${BASE_URL}/finding/add/new`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          credentials:'include',
-          body: JSON.stringify({ ...data, status: "open", review_status: "review_pending" })
+          credentials: "include",
+          body: JSON.stringify({ ...data, status: "open", review_status: "review_pending" }),
         });
         if (!res.ok) throw new Error("Failed to create finding");
         const created: Finding = await res.json();
         setItems((prev) => [created, ...prev]);
         notify("Finding added");
       } else {
-        const res = await fetch(`${BASE_URL}/api/findings/${id}`, {
+        const res = await fetch(`${BASE_URL}/finding/update/${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data)
+          body: JSON.stringify(data),
+          credentials: "include",
         });
         if (!res.ok) throw new Error("Failed to update finding");
         const updated: Finding = await res.json();
@@ -442,6 +545,8 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
     } catch (err) {
       console.error(err);
       notify("API operation failed", "error");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -460,10 +565,10 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: next }),
-        credentials:"include"
+        credentials: "include",
       });
       if (!res.ok) throw new Error("Failed update status");
-      
+
       setItems((prev) => prev.map((x) => (x.id === f.id ? { ...x, status: next } : x)));
       notify("Status updated");
     } catch (err) {
@@ -483,7 +588,7 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ review_status: nextReviewStatus }),
-        credentials:"include"
+        credentials: "include",
       });
       if (!res.ok) throw new Error("Failed update review status");
 
@@ -496,13 +601,19 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
   }
 
   async function remove(f: Finding) {
-    if (!isAdmin) { notify("403: only admins can delete findings", "error"); return; }
-    if (confirmId !== f.id) { setConfirmId(f.id); return; }
-    
+    if (!isAdmin) {
+      notify("403: only admins can delete findings", "error");
+      return;
+    }
+    if (confirmId !== f.id) {
+      setConfirmId(f.id);
+      return;
+    }
+
     try {
       const res = await fetch(`/api/findings/${f.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed deletion");
-      
+
       setConfirmId(null);
       setItems((prev) => prev.filter((x) => x.id !== f.id));
       notify("Finding deleted");
@@ -513,7 +624,13 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
   }
 
   if (loading) {
-    return <div className="dash"><div className="dash__wrap"><p>Loading findings from API...</p></div></div>;
+    return (
+      <div className="dash">
+        <div className="dash__wrap">
+          <p>Loading findings from API...</p>
+        </div>
+      </div>
+    );
   }
 
   /* ---------- render ---------- */
@@ -532,11 +649,18 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
             <div className="dash__role">
               <span>Logged in Role</span>
               <p className="user_role">
-                {user ? user?.role?.toLowerCase() : (loginUser?.role?.toLowerCase() || "guest")}
+                {user ? user?.role?.toLowerCase() : loginUser?.role?.toLowerCase() || "guest"}
               </p>
             </div>
             {isAnalystOrAdmin && (
-              <button type="button" className="btn btn-primary" onClick={() => { setEditing(null); setDialogOpen(true); }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  setEditing(null);
+                  setDialogOpen(true);
+                }}
+              >
                 New finding
               </button>
             )}
@@ -562,7 +686,9 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
                   aria-pressed={owner === w.id}
                   onClick={() => setOwner(owner === w.id ? null : w.id)}
                 >
-                  <span className="dash__avatar" aria-hidden="true">{initials(w.name)}</span>
+                  <span className="dash__avatar" aria-hidden="true">
+                    {initials(w.name)}
+                  </span>
                   <span>{w.name}</span>
                   <span className="dash__owner-count">{w.active} open</span>
                   {w.critical > 0 && <span className="dash__owner-crit">{w.critical} critical</span>}
@@ -582,9 +708,18 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
-            <select className="select" aria-label="Filter by severity" value={sev} onChange={(e) => setSev(e.target.value as "" | Severity)}>
+            <select
+              className="select"
+              aria-label="Filter by severity"
+              value={sev}
+              onChange={(e) => setSev(e.target.value as "" | Severity)}
+            >
               <option value="">All severities</option>
-              {SEVERITIES.map((s) => <option key={s} value={s}>{cap(s)}</option>)}
+              {SEVERITIES.map((s) => (
+                <option key={s} value={s}>
+                  {cap(s)}
+                </option>
+              ))}
             </select>
             <select
               className="select"
@@ -593,9 +728,18 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
               onChange={(e) => setOwner(e.target.value === "" ? null : Number(e.target.value))}
             >
               <option value="">All owners</option>
-              {users.map((u) => <option key={u?.id} value={u?.id}>{u?.full_name}</option>)}
+              {users.map((u) => (
+                <option key={u?.id} value={u?.id}>
+                  {u?.full_name}
+                </option>
+              ))}
             </select>
-            <button type="button" className="btn btn-secondary dash__mine" aria-pressed={mineOnly} onClick={() => setMineOnly((m) => !m)}>
+            <button
+              type="button"
+              className="btn btn-secondary dash__mine"
+              aria-pressed={mineOnly}
+              onClick={() => setMineOnly((m) => !m)}
+            >
               Assigned to me
             </button>
           </div>
@@ -605,8 +749,15 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
               All<b>{items.length}</b>
             </button>
             {STATUSES.map((s) => (
-              <button key={s} type="button" className="dash__tab" aria-pressed={status === s} onClick={() => setStatus(s)}>
-                {STATUS_LABEL[s]}<b>{counts.byStatus[s]}</b>
+              <button
+                key={s}
+                type="button"
+                className="dash__tab"
+                aria-pressed={status === s}
+                onClick={() => setStatus(s)}
+              >
+                {STATUS_LABEL[s]}
+                <b>{counts.byStatus[s]}</b>
               </button>
             ))}
           </div>
@@ -614,9 +765,24 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
           {visible.length === 0 ? (
             <div className="dash__state glass">
               <p>{filtersActive ? "No findings match these filters." : "No findings yet. Add the first one."}</p>
-              {filtersActive
-                ? <button type="button" className="btn btn-secondary" onClick={clearFilters}>Clear filters</button>
-                : isAnalystOrAdmin && <button type="button" className="btn btn-primary" onClick={() => { setEditing(null); setDialogOpen(true); }}>New finding</button>}
+              {filtersActive ? (
+                <button type="button" className="btn btn-secondary" onClick={clearFilters}>
+                  Clear filters
+                </button>
+              ) : (
+                isAnalystOrAdmin && (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => {
+                      setEditing(null);
+                      setDialogOpen(true);
+                    }}
+                  >
+                    New finding
+                  </button>
+                )
+              )}
             </div>
           ) : (
             visible.map((f, i) => {
@@ -634,9 +800,15 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
                   {/* Status Dropdown */}
                   <label>
                     <span className="sr-only">Status for {f.title}</span>
-                    <select className="select dash__select" value={f.status} onChange={(e) => changeStatus(f, e.target.value as Status)}>
+                    <select
+                      className="select dash__select"
+                      value={f.status}
+                      onChange={(e) => changeStatus(f, e.target.value as Status)}
+                    >
                       {[f.status, ...NEXT_STATUS[f.status]].map((s) => (
-                        <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+                        <option key={s} value={s}>
+                          {STATUS_LABEL[s]}
+                        </option>
                       ))}
                     </select>
                   </label>
@@ -651,13 +823,15 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
                       title={!isAnalystOrAdmin ? "Only Analysts and Admins can update review status" : ""}
                       onChange={(e) => changeReviewStatus(f, e.target.value as ReviewStatus)}
                     >
-                      <option value="review_pending">Review Pending</option>
-                      <option value="reviewed_fixed">Reviewed Finding Fixed</option>
+                      <option value="review_pending">{REVIEW_STATUS_LABEL.review_pending}</option>
+                      <option value="reviewed_fixed">{REVIEW_STATUS_LABEL.reviewed_fixed}</option>
                     </select>
                   </label>
 
                   <div className="dash__owner">
-                    <span className="dash__avatar" aria-hidden="true">{initials(ownerName)}</span>
+                    <span className="dash__avatar" aria-hidden="true">
+                      {initials(ownerName)}
+                    </span>
                     <span>
                       {ownerName}
                       {f.owner_id === me.id && <span className="dash__you">You</span>}
@@ -666,7 +840,14 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
 
                   <div className="dash__acts">
                     {isAnalystOrAdmin && (
-                      <button type="button" className="btn btn-secondary dash__btn-sm" onClick={() => { setEditing(f); setDialogOpen(true); }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary dash__btn-sm"
+                        onClick={() => {
+                          setEditing(f);
+                          setDialogOpen(true);
+                        }}
+                      >
                         Edit
                       </button>
                     )}
@@ -683,11 +864,23 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
 
           {filtered.length > PAGE_SIZE && (
             <div className="dash__pager">
-              <button type="button" className="btn btn-secondary dash__btn-sm" disabled={current < 2} onClick={() => setPage(current - 1)}>
+              <button
+                type="button"
+                className="btn btn-secondary dash__btn-sm"
+                disabled={current < 2}
+                onClick={() => setPage(current - 1)}
+              >
                 Previous
               </button>
-              <span aria-live="polite">Page {current} of {pages}</span>
-              <button type="button" className="btn btn-secondary dash__btn-sm" disabled={current >= pages} onClick={() => setPage(current + 1)}>
+              <span aria-live="polite">
+                Page {current} of {pages}
+              </span>
+              <button
+                type="button"
+                className="btn btn-secondary dash__btn-sm"
+                disabled={current >= pages}
+                onClick={() => setPage(current + 1)}
+              >
                 Next
               </button>
             </div>
@@ -699,6 +892,7 @@ export default function DashboardPage({ loginUser }: { loginUser?: loginUserType
         open={dialogOpen}
         finding={editing}
         users={users}
+        saving={saving}
         onClose={() => setDialogOpen(false)}
         onSave={saveFinding}
       />
